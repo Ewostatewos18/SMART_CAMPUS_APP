@@ -1,16 +1,63 @@
 # smart_campus_app
 
-A new Flutter project.
+steps to run the Flutter + Firebase project locally.
 
-## Getting Started
+1. Clone the repository
 
-This project is a starting point for a Flutter application.
+```bash
+git clone YOUR_GITHUB_REPO_LINK
+```
 
-A few resources to get you started if this is your first Flutter project:
+2. Open the project in VS Code or Android Studio
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+3. Install Flutter packages
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+```bash
+flutter pub get
+```
+
+4. Make sure Flutter SDK is installed
+
+Check using:
+
+```bash
+flutter doctor
+```
+
+5. Firebase Setup
+
+The project already uses Firebase.
+
+For Android:
+Place the `google-services.json` file inside:
+
+```text
+android/app/
+```
+
+For iOS:
+Place `GoogleService-Info.plist` inside:
+
+```text
+ios/Runner/
+```
+
+6. Run the app
+
+```bash
+flutter run
+```
+
+If there are any dependency issues:
+
+```bash
+flutter clean
+flutter pub get
+```
+
+7. Required tools
+
+* Flutter SDK
+* Android Studio or VS Code
+* Android Emulator or physical device
+* Firebase account

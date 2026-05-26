@@ -1,18 +1,22 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
-import '../providers/auth_provider.dart';
-import '../widgets/loading_overlay.dart';
-import 'register_screen.dart';
+import '../core/providers/service_providers.dart';
+import '../core/constants/app_constants.dart';
+import '../core/utils/bdu_email_validator.dart';
+import '../core/widgets/app_brand_header.dart';
+import '../core/widgets/loading_overlay.dart';
+import '../features/auth/presentation/auth_notifier.dart';
 
-class LoginScreen extends StatefulWidget {
+class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  ConsumerState<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _email = TextEditingController();
   final _password = TextEditingController();
@@ -27,15 +31,18 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
-    final auth = context.read<AuthProvider>();
-    auth.clearError();
+    ref.read(authStateProvider.notifier).clearError();
     try {
-      await auth.signIn(_email.text, _password.text);
+      await ref.read(authStateProvider.notifier).signIn(
+            BduEmailValidator.normalize(_email.text),
+            _password.text,
+          );
     } catch (_) {
       if (mounted) {
+        final msg = ref.read(authStateProvider).errorMessage ?? 'Sign in failed';
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(auth.errorMessage ?? 'Sign in failed'),
+            content: Text(msg),
             backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
@@ -45,7 +52,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final auth = context.watch<AuthProvider>();
+    final auth = ref.watch(authStateProvider);
+
     return Scaffold(
       body: LoadingOverlay(
         loading: auth.isLoading && auth.appUser == null,
@@ -54,47 +62,26 @@ class _LoginScreenState extends State<LoginScreen> {
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(24),
               child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 400),
+                constraints: const BoxConstraints(maxWidth: 420),
                 child: Form(
                   key: _formKey,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Icon(
-                        Icons.school_rounded,
-                        size: 72,
-                        color: Theme.of(context).colorScheme.primary,
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        'Smart Campus',
-                        textAlign: TextAlign.center,
-                        style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
-                      ),
-                      Text(
-                        'Complaints & Suggestions',
-                        textAlign: TextAlign.center,
-                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                              color: Theme.of(context).colorScheme.onSurfaceVariant,
-                            ),
-                      ),
-                      const SizedBox(height: 32),
+                      const AppBrandHeader(),
+                      const SizedBox(height: 36),
                       TextFormField(
                         controller: _email,
                         keyboardType: TextInputType.emailAddress,
                         textInputAction: TextInputAction.next,
+                        autocorrect: false,
                         decoration: const InputDecoration(
-                          labelText: 'Email',
+                          labelText: 'University email',
+                          hintText: AppConstants.studentEmailExample,
+                          helperText: AppConstants.studentEmailHint,
                           prefixIcon: Icon(Icons.email_outlined),
                         ),
-                        validator: (v) {
-                          if (v == null || v.trim().isEmpty) {
-                            return 'Enter your email';
-                          }
-                          return null;
-                        },
+                        validator: BduEmailValidator.validate,
                       ),
                       const SizedBox(height: 16),
                       TextFormField(
@@ -109,31 +96,28 @@ class _LoginScreenState extends State<LoginScreen> {
                                   ? Icons.visibility_outlined
                                   : Icons.visibility_off_outlined,
                             ),
-                            onPressed: () =>
-                                setState(() => _obscure = !_obscure),
+                            onPressed: () => setState(() => _obscure = !_obscure),
                           ),
                         ),
-                        validator: (v) {
-                          if (v == null || v.length < 6) {
-                            return 'At least 6 characters';
-                          }
-                          return null;
-                        },
+                        validator: (v) =>
+                            v == null || v.length < 6 ? 'At least 6 characters' : null,
                       ),
-                      const SizedBox(height: 24),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: TextButton(
+                          onPressed: () => context.push('/forgot-password'),
+                          child: const Text('Forgot password?'),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
                       FilledButton(
                         onPressed: auth.isLoading ? null : _submit,
                         child: const Text('Sign in'),
                       ),
-                      TextButton(
-                        onPressed: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute<void>(
-                              builder: (_) => const RegisterScreen(),
-                            ),
-                          );
-                        },
-                        child: const Text('Create an account'),
+                      const SizedBox(height: 8),
+                      OutlinedButton(
+                        onPressed: () => context.push('/register'),
+                        child: const Text('Create student account'),
                       ),
                     ],
                   ),

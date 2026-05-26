@@ -1,0 +1,97 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function userDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function userRole() {
+      return userDoc().role;
+    }
+
+    function isAdmin() {
+      return signedIn() && userRole() == 'admin';
+    }
+
+    function isExecutive() {
+      return signedIn() && userRole() in ['vicePresident', 'president'];
+    }
+
+    function isOfficer() {
+      return signedIn() && userRole() == 'sectorOfficer';
+    }
+
+    function isStudent() {
+      return signedIn() && userRole() == 'student';
+    }
+
+    match /users/{userId} {
+      allow read: if signedIn() && (request.auth.uid == userId || isAdmin());
+      allow create: if signedIn()
+        && request.auth.uid == userId
+        && request.resource.data.role == 'student';
+      allow update: if signedIn() && (
+        (request.auth.uid == userId
+          && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'sectorId']))
+        || isAdmin()
+      );
+      allow delete: if isAdmin();
+    }
+
+    match /complaints/{complaintId} {
+      allow read: if signedIn() && (
+        resource.data.studentId == request.auth.uid
+        || isAdmin()
+        || isExecutive()
+        || (isOfficer() && resource.data.sectorId == userDoc().sectorId)
+      );
+      allow create: if isStudent()
+        && request.resource.data.studentId == request.auth.uid
+        && request.resource.data.status == 'submitted';
+      allow update: if signedIn() && (
+        isAdmin()
+        || isExecutive()
+        || (isOfficer()
+          && resource.data.sectorId == userDoc().sectorId)
+        || (resource.data.studentId == request.auth.uid
+          && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['satisfaction', 'updatedAt']))
+      );
+      allow delete: if isAdmin();
+    }
+
+    match /responses/{responseId} {
+      allow read: if signedIn();
+      allow create: if signedIn() && (
+        isAdmin() || isExecutive() || isOfficer() || isStudent()
+      );
+      allow update, delete: if isAdmin();
+    }
+
+    match /notifications/{notificationId} {
+      allow read: if signedIn() && resource.data.userId == request.auth.uid;
+      allow create: if signedIn();
+      allow update: if signedIn() && resource.data.userId == request.auth.uid;
+      allow delete: if isAdmin();
+    }
+
+    match /escalation_logs/{logId} {
+      allow read: if isAdmin() || isExecutive() || isOfficer();
+      allow write: if signedIn();
+    }
+
+    match /messages/{messageId} {
+      allow read, write: if signedIn();
+    }
+
+    match /announcements/{announcementId} {
+      allow read: if signedIn();
+      allow write: if isAdmin() || isExecutive();
+    }
+  }
+}

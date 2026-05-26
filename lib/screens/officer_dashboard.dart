@@ -1,21 +1,20 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
-import '../providers/auth_provider.dart';
-import '../services/complaint_service.dart';
+import '../core/providers/service_providers.dart';
+import '../features/auth/presentation/auth_notifier.dart';
+import '../models/sector_model.dart';
 import 'complaint_list_screen.dart';
 
-/// Sector officer: work queue for the assigned [sectorId].
-class OfficerDashboard extends StatelessWidget {
+class OfficerDashboard extends ConsumerWidget {
   const OfficerDashboard({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final user = context.watch<AuthProvider>().appUser;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final user = ref.watch(authStateProvider).appUser;
     if (user == null) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
     if (user.sectorId == null) {
       return Scaffold(
@@ -25,17 +24,21 @@ class OfficerDashboard extends StatelessWidget {
         ),
       );
     }
-    final stream = context
-        .read<ComplaintService>()
-        .streamForSector(user.sectorId!);
+
+    final stream =
+        ref.watch(complaintServiceProvider).streamForSector(user.sectorId!);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Officer queue'),
+        title: Text('${CampusSectors.label(user.sectorId!)} queue'),
         actions: [
           IconButton(
-            onPressed: () => context.read<AuthProvider>().signOut(),
-            icon: const Icon(Icons.logout_rounded),
+            onPressed: () => context.push('/search'),
+            icon: const Icon(Icons.search),
+          ),
+          IconButton(
+            onPressed: () => context.push('/profile'),
+            icon: const Icon(Icons.person_outline),
           ),
         ],
       ),

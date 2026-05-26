@@ -8,6 +8,7 @@ class AppNotification {
     required this.message,
     required this.isRead,
     this.createdAt,
+    this.type = 'general',
   });
 
   final String notificationId;
@@ -15,6 +16,7 @@ class AppNotification {
   final String message;
   final bool isRead;
   final DateTime? createdAt;
+  final String type;
 
   Map<String, dynamic> toFirestore() {
     return {
@@ -22,6 +24,7 @@ class AppNotification {
       'userId': userId,
       'message': message,
       'isRead': isRead,
+      'type': type,
       if (createdAt != null) 'createdAt': Timestamp.fromDate(createdAt!),
     };
   }
@@ -38,6 +41,7 @@ class AppNotification {
       message: data['message'] as String? ?? '',
       isRead: data['isRead'] as bool? ?? false,
       createdAt: created,
+      type: data['type'] as String? ?? 'general',
     );
   }
 }

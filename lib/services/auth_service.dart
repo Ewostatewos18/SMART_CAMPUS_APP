@@ -20,7 +20,6 @@ class AuthService {
 
   Stream<User?> authStateChanges() => _auth.authStateChanges();
 
-  /// Watch the signed-in user's profile document.
   Stream<AppUser?> userProfileStream(String uid) {
     return _db.collection(FirestorePaths.users).doc(uid).snapshots().map(
       (doc) {
@@ -36,18 +35,14 @@ class AuthService {
     return AppUser.fromDoc(doc);
   }
 
-  /// Creates Auth user and `users/{uid}` document in a batch.
-  Future<AppUser> register({
+  /// Students only — staff roles must be assigned by admin.
+  Future<AppUser> registerStudent({
     required String name,
     required String email,
     required String password,
-    required UserRole role,
-    String? sectorId,
+    String? department,
+    String? studentId,
   }) async {
-    if (role == UserRole.sectorOfficer &&
-        (sectorId == null || sectorId.isEmpty)) {
-      throw ArgumentError('Sector officers must have a sector assigned.');
-    }
     final cred = await _auth.createUserWithEmailAndPassword(
       email: email.trim(),
       password: password,
@@ -57,10 +52,17 @@ class AuthService {
       userId: uid,
       name: name.trim(),
       email: email.trim(),
-      role: role,
-      sectorId: role == UserRole.sectorOfficer ? sectorId : null,
+      role: UserRole.student,
+      department: department?.trim(),
+      studentId: studentId?.trim(),
+      createdAt: DateTime.now(),
     );
     await _db.collection(FirestorePaths.users).doc(uid).set(user.toFirestore());
+
+    try {
+      await cred.user!.sendEmailVerification();
+    } catch (_) {}
+
     return user;
   }
 
@@ -83,17 +85,45 @@ class AuthService {
 
   Future<void> signOut() => _auth.signOut();
 
+  Future<void> sendPasswordResetEmail(String email) {
+    return _auth.sendPasswordResetEmail(email: email.trim());
+  }
+
   Future<void> updateProfile({
     required String uid,
     String? name,
+    String? department,
+    String? studentId,
+    String? profileImageUrl,
     UserRole? role,
     String? sectorId,
+    String? fcmToken,
   }) async {
     final map = <String, dynamic>{};
     if (name != null) map['name'] = name;
+    if (department != null) map['department'] = department;
+    if (studentId != null) map['studentId'] = studentId;
+    if (profileImageUrl != null) map['profileImageUrl'] = profileImageUrl;
     if (role != null) map['role'] = role.value;
     if (sectorId != null) map['sectorId'] = sectorId;
+    if (fcmToken != null) map['fcmToken'] = fcmToken;
     if (map.isEmpty) return;
     await _db.collection(FirestorePaths.users).doc(uid).update(map);
+  }
+
+  Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    final user = _auth.currentUser;
+    if (user == null || user.email == null) {
+      throw StateError('Not signed in.');
+    }
+    final cred = EmailAuthProvider.credential(
+      email: user.email!,
+      password: currentPassword,
+    );
+    await user.reauthenticateWithCredential(cred);
+    await user.updatePassword(newPassword);
   }
 }

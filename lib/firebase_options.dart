@@ -25,9 +25,7 @@ class DefaultFirebaseOptions {
       case TargetPlatform.windows:
         return windows;
       case TargetPlatform.linux:
-        throw UnsupportedError(
-          'Configure Firebase for Linux or run on Android / iOS / Web / Windows.',
-        );
+        return linux;
       default:
         throw UnsupportedError(
           'DefaultFirebaseOptions are not supported for this platform.',
@@ -73,6 +71,18 @@ class DefaultFirebaseOptions {
   static const FirebaseOptions windows = FirebaseOptions(
     apiKey: 'AIzaSyD9ZWxl50b3MAdfGlH1rDUPVS58oZXyutE',
     appId: '1:1085264372032:web:53214ae8ab6d0e375b9aa5',
+    messagingSenderId: '1085264372032',
+    projectId: 'smartcampusapp-bf9af',
+    authDomain: 'smartcampusapp-bf9af.firebaseapp.com',
+    storageBucket: 'smartcampusapp-bf9af.firebasestorage.app',
+  );
+
+  /// Linux desktop uses the same Firebase project as Web for local development.
+  /// Run `dart run flutterfire_cli:flutterfire configure` and select Linux
+  /// to generate a dedicated Linux app ID for production builds.
+  static const FirebaseOptions linux = FirebaseOptions(
+    apiKey: 'AIzaSyD9ZWxl50b3MAdfGlH1rDUPVS58oZXyutE',
+    appId: '1:1085264372032:web:584e2320f8a0e8ea5b9aa5',
     messagingSenderId: '1085264372032',
     projectId: 'smartcampusapp-bf9af',
     authDomain: 'smartcampusapp-bf9af.firebaseapp.com',

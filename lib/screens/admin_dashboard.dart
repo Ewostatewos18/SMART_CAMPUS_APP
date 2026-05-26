@@ -1,41 +1,40 @@
+import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../core/providers/service_providers.dart';
+import '../core/widgets/complaint_card.dart';
+import '../core/widgets/empty_state.dart';
+import '../core/widgets/shimmer_loading.dart';
+import '../features/auth/presentation/auth_notifier.dart';
 import '../models/complaint_model.dart';
-import '../providers/auth_provider.dart';
-import '../services/complaint_service.dart';
+import '../models/complaint_status.dart';
 import '../services/report_service.dart';
-import '../widgets/complaint_card.dart';
-import '../widgets/empty_state.dart';
-import 'complaint_detail_screen.dart';
-import 'user_management_screen.dart';
 
-/// Admin: overview, reports, and entry to user tools.
-class AdminDashboard extends StatelessWidget {
+class AdminDashboard extends ConsumerWidget {
   const AdminDashboard({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final svc = context.watch<ComplaintService>();
+  Widget build(BuildContext context, WidgetRef ref) {
+    final svc = ref.watch(complaintServiceProvider);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Administration'),
+        title: const Text('Admin dashboard'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.search),
+            onPressed: () => context.push('/search'),
+          ),
           IconButton(
             icon: const Icon(Icons.groups_outlined),
             tooltip: 'Users',
-            onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute<void>(
-                  builder: (_) => const UserManagementScreen(),
-                ),
-              );
-            },
+            onPressed: () => context.push('/admin/users'),
           ),
           IconButton(
-            onPressed: () => context.read<AuthProvider>().signOut(),
-            icon: const Icon(Icons.logout_rounded),
+            onPressed: () => context.push('/profile'),
+            icon: const Icon(Icons.person_outline),
           ),
         ],
       ),
@@ -45,9 +44,7 @@ class AdminDashboard extends StatelessWidget {
           if (snap.hasError) {
             return Center(child: Text('${snap.error}'));
           }
-          if (!snap.hasData) {
-            return const Center(child: CircularProgressIndicator());
-          }
+          if (!snap.hasData) return const ShimmerList();
           final list = snap.data!;
           final report = CampusReport.fromComplaints(list);
 
@@ -60,11 +57,29 @@ class AdminDashboard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Campus snapshot',
-                        style: Theme.of(context).textTheme.titleLarge,
+                        'Campus overview',
+                        style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                              fontWeight: FontWeight.w800,
+                            ),
                       ),
+                      const SizedBox(height: 16),
+                      _MetricGrid(report: report),
+                      const SizedBox(height: 24),
+                      Text('Status distribution',
+                          style: Theme.of(context).textTheme.titleMedium),
                       const SizedBox(height: 12),
-                      _ReportGrid(report: report),
+                      SizedBox(
+                        height: 200,
+                        child: _StatusPieChart(report: report),
+                      ),
+                      const SizedBox(height: 24),
+                      Text('Sector performance',
+                          style: Theme.of(context).textTheme.titleMedium),
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        height: 220,
+                        child: _SectorBarChart(report: report),
+                      ),
                     ],
                   ),
                 ),
@@ -77,25 +92,20 @@ class AdminDashboard extends StatelessWidget {
                   ),
                 )
               else
-                SliverList(
-                  delegate: SliverChildBuilderDelegate(
-                    (context, i) {
-                      final c = list[i];
-                      return ComplaintCard(
-                        complaint: c,
-                        showStudent: true,
-                        onTap: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute<void>(
-                              builder: (_) => ComplaintDetailScreen(
-                                complaintId: c.complaintId,
-                              ),
-                            ),
-                          );
-                        },
-                      );
-                    },
-                    childCount: list.length,
+                SliverPadding(
+                  padding: const EdgeInsets.only(bottom: 24),
+                  sliver: SliverList(
+                    delegate: SliverChildBuilderDelegate(
+                      (context, i) {
+                        final c = list[i];
+                        return ComplaintCard(
+                          complaint: c,
+                          showStudent: true,
+                          onTap: () => context.push('/complaint/${c.complaintId}'),
+                        );
+                      },
+                      childCount: list.length,
+                    ),
                   ),
                 ),
             ],
@@ -106,72 +116,197 @@ class AdminDashboard extends StatelessWidget {
   }
 }
 
-class _ReportGrid extends StatelessWidget {
-  const _ReportGrid({required this.report});
+class _MetricGrid extends StatelessWidget {
+  const _MetricGrid({required this.report});
 
   final CampusReport report;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return GridView.count(
+      crossAxisCount: 2,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      mainAxisSpacing: 12,
+      crossAxisSpacing: 12,
+      childAspectRatio: 1.6,
       children: [
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: [
-            _MetricChip(
-              label: 'Total',
-              value: '${report.total}',
-            ),
-            ...report.byStatus.entries.map(
-              (e) => _MetricChip(
-                label: e.key.displayName,
-                value: '${e.value}',
-              ),
-            ),
-          ],
+        _MetricCard(
+          label: 'Total',
+          value: '${report.total}',
+          icon: Icons.folder_open,
+          color: Theme.of(context).colorScheme.primary,
         ),
-        const SizedBox(height: 16),
-        Text(
-          'By sector',
-          style: Theme.of(context).textTheme.titleSmall,
+        _MetricCard(
+          label: 'Resolved',
+          value: '${report.resolvedCount}',
+          icon: Icons.check_circle_outline,
+          color: Colors.green.shade700,
         ),
-        const SizedBox(height: 8),
-        ...report.bySector.entries.map(
-          (e) => ListTile(
-            dense: true,
-            contentPadding: EdgeInsets.zero,
-            title: Text(CampusReport.sectorLabel(e.key)),
-            trailing: Text('${e.value}'),
-          ),
+        _MetricCard(
+          label: 'Pending',
+          value: '${report.pendingCount}',
+          icon: Icons.pending_actions,
+          color: Colors.orange.shade800,
+        ),
+        _MetricCard(
+          label: 'Escalated',
+          value: '${report.escalatedCount}',
+          icon: Icons.priority_high,
+          color: Theme.of(context).colorScheme.error,
         ),
       ],
     );
   }
 }
 
-class _MetricChip extends StatelessWidget {
-  const _MetricChip({required this.label, required this.value});
+class _MetricCard extends StatelessWidget {
+  const _MetricCard({
+    required this.label,
+    required this.value,
+    required this.icon,
+    required this.color,
+  });
 
   final String label;
   final String value;
+  final IconData icon;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
-    return Chip(
-      avatar: CircleAvatar(
-        backgroundColor: Theme.of(context).colorScheme.primary,
-        child: Text(
-          value,
-          style: TextStyle(
-            color: Theme.of(context).colorScheme.onPrimary,
-            fontSize: 12,
-            fontWeight: FontWeight.bold,
-          ),
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Icon(icon, color: color),
+            Text(
+              value,
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    color: color,
+                  ),
+            ),
+            Text(label, style: Theme.of(context).textTheme.bodySmall),
+          ],
         ),
       ),
-      label: Text(label),
+    );
+  }
+}
+
+class _StatusPieChart extends StatelessWidget {
+  const _StatusPieChart({required this.report});
+
+  final CampusReport report;
+
+  @override
+  Widget build(BuildContext context) {
+    final entries = report.byStatus.entries
+        .where((e) => e.value > 0)
+        .toList();
+    if (entries.isEmpty) {
+      return const Center(child: Text('No data yet'));
+    }
+
+    final colors = [
+      Colors.blue,
+      Colors.orange,
+      Colors.purple,
+      Colors.teal,
+      Colors.green,
+      Colors.red,
+      Colors.grey,
+      Colors.brown,
+    ];
+
+    return PieChart(
+      PieChartData(
+        sectionsSpace: 2,
+        centerSpaceRadius: 36,
+        sections: [
+          for (var i = 0; i < entries.length; i++)
+            PieChartSectionData(
+              value: entries[i].value.toDouble(),
+              title: '${entries[i].value}',
+              color: colors[i % colors.length],
+              radius: 52,
+              titleStyle: const TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SectorBarChart extends StatelessWidget {
+  const _SectorBarChart({required this.report});
+
+  final CampusReport report;
+
+  @override
+  Widget build(BuildContext context) {
+    final entries = report.bySector.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+
+    if (entries.isEmpty) {
+      return const Center(child: Text('No sector data'));
+    }
+
+    final maxY = entries.first.value.toDouble() + 2;
+
+    return BarChart(
+      BarChartData(
+        maxY: maxY,
+        barGroups: [
+          for (var i = 0; i < entries.length && i < 6; i++)
+            BarChartGroupData(
+              x: i,
+              barRods: [
+                BarChartRodData(
+                  toY: entries[i].value.toDouble(),
+                  color: Theme.of(context).colorScheme.primary,
+                  width: 16,
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(6)),
+                ),
+              ],
+            ),
+        ],
+        titlesData: FlTitlesData(
+          bottomTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              reservedSize: 28,
+              getTitlesWidget: (value, meta) {
+                final i = value.toInt();
+                if (i < 0 || i >= entries.length || i >= 6) {
+                  return const SizedBox.shrink();
+                }
+                final label = CampusReport.sectorLabel(entries[i].key);
+                return Padding(
+                  padding: const EdgeInsets.only(top: 6),
+                  child: Text(
+                    label.length > 8 ? '${label.substring(0, 7)}…' : label,
+                    style: const TextStyle(fontSize: 9),
+                  ),
+                );
+              },
+            ),
+          ),
+          leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: true)),
+          topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+        ),
+        gridData: const FlGridData(show: false),
+        borderData: FlBorderData(show: false),
+      ),
     );
   }
 }

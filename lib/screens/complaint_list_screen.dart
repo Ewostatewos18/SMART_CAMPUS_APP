@@ -1,12 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../core/providers/service_providers.dart';
+import '../core/widgets/complaint_card.dart';
+import '../core/widgets/empty_state.dart';
+import '../core/widgets/shimmer_loading.dart';
 import '../models/complaint_model.dart';
-import '../widgets/complaint_card.dart';
-import '../widgets/empty_state.dart';
-import 'complaint_detail_screen.dart';
+import '../models/complaint_status.dart';
+import '../models/complaint_type.dart';
+import '../models/sector_model.dart';
 
-/// Generic list driven by a [Stream] of complaints.
-class ComplaintListScreen extends StatelessWidget {
+class ComplaintListScreen extends ConsumerWidget {
   const ComplaintListScreen({
     super.key,
     required this.title,
@@ -18,53 +23,35 @@ class ComplaintListScreen extends StatelessWidget {
   final String title;
   final Stream<List<Complaint>> complaintsStream;
   final bool showStudentOnCard;
-
-  /// When true, only the scrollable content is returned (parent supplies [Scaffold]).
   final bool embedded;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final body = StreamBuilder<List<Complaint>>(
-      stream: complaintsStream,
+      stream: ref
+          .watch(complaintServiceProvider)
+          .streamWithStudentNames(complaintsStream),
       builder: (context, snap) {
         if (snap.hasError) {
-          return Center(
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Text(
-                'Error loading list: ${snap.error}',
-                textAlign: TextAlign.center,
-              ),
-            ),
-          );
+          return Center(child: Text('${snap.error}'));
         }
-        if (!snap.hasData) {
-          return const Center(child: CircularProgressIndicator());
-        }
+        if (!snap.hasData) return const ShimmerList();
         final list = snap.data!;
         if (list.isEmpty) {
           return const EmptyState(
             icon: Icons.inbox_outlined,
-            title: 'No complaints yet',
-            subtitle: 'When items appear, they will show up here.',
+            title: 'No complaints here',
           );
         }
         return ListView.builder(
+          padding: const EdgeInsets.symmetric(vertical: 8),
           itemCount: list.length,
           itemBuilder: (context, i) {
             final c = list[i];
             return ComplaintCard(
               complaint: c,
               showStudent: showStudentOnCard,
-              onTap: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (_) => ComplaintDetailScreen(
-                      complaintId: c.complaintId,
-                    ),
-                  ),
-                );
-              },
+              onTap: () => context.push('/complaint/${c.complaintId}'),
             );
           },
         );

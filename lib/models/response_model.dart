@@ -8,6 +8,8 @@ class ComplaintResponse {
     required this.officerId,
     required this.message,
     required this.createdAt,
+    this.authorName,
+    this.authorRole,
     this.authorLabel,
   });
 
@@ -16,7 +18,12 @@ class ComplaintResponse {
   final String officerId;
   final String message;
   final DateTime createdAt;
+  final String? authorName;
+  final String? authorRole;
   final String? authorLabel;
+
+  String get displayAuthor =>
+      authorLabel ?? authorName ?? (authorRole != null ? authorRole! : 'Staff');
 
   Map<String, dynamic> toFirestore() {
     return {
@@ -25,6 +32,8 @@ class ComplaintResponse {
       'officerId': officerId,
       'message': message,
       'createdAt': Timestamp.fromDate(createdAt),
+      if (authorName != null) 'authorName': authorName,
+      if (authorRole != null) 'authorRole': authorRole,
     };
   }
 
@@ -42,17 +51,8 @@ class ComplaintResponse {
       officerId: data['officerId'] as String? ?? '',
       message: data['message'] as String? ?? '',
       createdAt: created,
-    );
-  }
-
-  ComplaintResponse copyWith({String? authorLabel}) {
-    return ComplaintResponse(
-      responseId: responseId,
-      complaintId: complaintId,
-      officerId: officerId,
-      message: message,
-      createdAt: createdAt,
-      authorLabel: authorLabel ?? this.authorLabel,
+      authorName: data['authorName'] as String?,
+      authorRole: data['authorRole'] as String?,
     );
   }
 }

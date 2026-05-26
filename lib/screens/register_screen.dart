@@ -1,60 +1,77 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
-import '../models/sector_model.dart';
-import '../models/user_role.dart';
-import '../providers/auth_provider.dart';
-import '../widgets/loading_overlay.dart';
+import '../core/constants/app_constants.dart';
+import '../core/utils/bdu_email_validator.dart';
+import '../core/widgets/loading_overlay.dart';
+import '../features/auth/presentation/auth_notifier.dart';
 
-class RegisterScreen extends StatefulWidget {
+class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({super.key});
 
   @override
-  State<RegisterScreen> createState() => _RegisterScreenState();
+  ConsumerState<RegisterScreen> createState() => _RegisterScreenState();
 }
 
-class _RegisterScreenState extends State<RegisterScreen> {
+class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
   final _name = TextEditingController();
   final _email = TextEditingController();
   final _password = TextEditingController();
+  final _department = TextEditingController();
+  final _studentId = TextEditingController();
   bool _obscure = true;
-  UserRole _role = UserRole.student;
-  String? _sectorId = CampusSectors.all.first.id;
 
   @override
   void dispose() {
     _name.dispose();
     _email.dispose();
     _password.dispose();
+    _department.dispose();
+    _studentId.dispose();
     super.dispose();
   }
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
-    if (_role == UserRole.sectorOfficer &&
-        (_sectorId == null || _sectorId!.isEmpty)) {
+    ref.read(authStateProvider.notifier).clearError();
+
+    final email = BduEmailValidator.normalize(_email.text);
+    final idFromEmail = BduEmailValidator.extractStudentId(email);
+    final studentId = _studentId.text.trim().isEmpty
+        ? idFromEmail
+        : _studentId.text.trim();
+
+    if (idFromEmail != null &&
+        _studentId.text.trim().isNotEmpty &&
+        _studentId.text.trim() != idFromEmail) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select a sector.')),
+        const SnackBar(
+          content: Text('Student ID must match the number in your BDU email.'),
+        ),
       );
       return;
     }
-    final auth = context.read<AuthProvider>();
-    auth.clearError();
+
     try {
-      await auth.register(
-        name: _name.text,
-        email: _email.text,
-        password: _password.text,
-        role: _role,
-        sectorId: _role == UserRole.sectorOfficer ? _sectorId : null,
-      );
-      if (mounted) Navigator.of(context).pop();
+      await ref.read(authStateProvider.notifier).registerStudent(
+            name: _name.text,
+            email: email,
+            password: _password.text,
+            department: _department.text.trim().isEmpty
+                ? null
+                : _department.text.trim(),
+            studentId: studentId,
+          );
+      if (mounted) context.go('/student');
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(auth.errorMessage ?? 'Registration failed'),
+            content: Text(
+              ref.read(authStateProvider).errorMessage ?? 'Registration failed',
+            ),
             backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
@@ -64,9 +81,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final auth = context.watch<AuthProvider>();
+    final auth = ref.watch(authStateProvider);
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Register')),
+      appBar: AppBar(title: const Text('Student registration')),
       body: LoadingOverlay(
         loading: auth.isLoading,
         child: SafeArea(
@@ -80,6 +98,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
+                      Text(
+                        'Join ${AppConstants.universityName}',
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                              fontWeight: FontWeight.w700,
+                            ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Student accounts only. Staff roles are assigned by administrators.',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            ),
+                      ),
+                      const SizedBox(height: 24),
                       TextFormField(
                         controller: _name,
                         textInputAction: TextInputAction.next,
@@ -95,16 +127,51 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         controller: _email,
                         keyboardType: TextInputType.emailAddress,
                         textInputAction: TextInputAction.next,
+                        autocorrect: false,
+                        onChanged: (value) {
+                          final id = BduEmailValidator.extractStudentId(value);
+                          if (id != null && _studentId.text.trim().isEmpty) {
+                            _studentId.text = id;
+                          }
+                        },
                         decoration: const InputDecoration(
                           labelText: 'University email',
+                          hintText: AppConstants.studentEmailExample,
+                          helperText: AppConstants.studentEmailHint,
                           prefixIcon: Icon(Icons.email_outlined),
                         ),
+                        validator: BduEmailValidator.validate,
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _studentId,
+                        textInputAction: TextInputAction.next,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(
+                          labelText: 'Student ID',
+                          hintText: '1403952',
+                          helperText: 'Filled automatically from your BDU email',
+                          prefixIcon: Icon(Icons.badge_outlined),
+                        ),
                         validator: (v) {
-                          if (v == null || !v.contains('@')) {
-                            return 'Valid email required';
+                          if (v == null || v.trim().isEmpty) {
+                            return 'Enter your student ID';
+                          }
+                          if (!RegExp(AppConstants.studentIdPattern)
+                              .hasMatch(v.trim())) {
+                            return 'Use digits only (e.g. 1403952)';
                           }
                           return null;
                         },
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _department,
+                        textInputAction: TextInputAction.next,
+                        decoration: const InputDecoration(
+                          labelText: 'Department / Faculty (optional)',
+                          prefixIcon: Icon(Icons.account_tree_outlined),
+                        ),
                       ),
                       const SizedBox(height: 16),
                       TextFormField(
@@ -124,51 +191,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           ),
                         ),
                         validator: (v) {
-                          if (v == null || v.length < 6) {
-                            return 'Min 6 characters';
-                          }
+                          if (v == null || v.length < 6) return 'Min 6 characters';
                           return null;
                         },
                       ),
-                      const SizedBox(height: 16),
-                      DropdownButtonFormField<UserRole>(
-                        value: _role,
-                        decoration: const InputDecoration(
-                          labelText: 'Role',
-                          prefixIcon: Icon(Icons.badge_outlined),
-                        ),
-                        items: UserRole.values
-                            .map(
-                              (r) => DropdownMenuItem(
-                                value: r,
-                                child: Text(r.displayName),
-                              ),
-                            )
-                            .toList(),
-                        onChanged: (v) {
-                          if (v != null) setState(() => _role = v);
-                        },
-                      ),
-                      if (_role == UserRole.sectorOfficer) ...[
-                        const SizedBox(height: 16),
-                        DropdownButtonFormField<String>(
-                          value: _sectorId,
-                          decoration: const InputDecoration(
-                            labelText: 'Assigned sector',
-                            prefixIcon: Icon(Icons.domain_verification_outlined),
-                          ),
-                          items: CampusSectors.all
-                              .map(
-                                (s) => DropdownMenuItem(
-                                  value: s.id,
-                                  child: Text(s.name),
-                                ),
-                              )
-                              .toList(),
-                          onChanged: (v) =>
-                              setState(() => _sectorId = v),
-                        ),
-                      ],
                       const SizedBox(height: 24),
                       FilledButton(
                         onPressed: auth.isLoading ? null : _submit,

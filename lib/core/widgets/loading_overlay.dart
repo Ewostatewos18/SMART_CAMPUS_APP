@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-/// Full-screen blocking loader used during async work.
+/// Full-screen loading overlay with optional message.
 class LoadingOverlay extends StatelessWidget {
   const LoadingOverlay({
     super.key,
@@ -20,7 +20,7 @@ class LoadingOverlay extends StatelessWidget {
         child,
         if (loading)
           ColoredBox(
-            color: const Color(0x66000000),
+            color: Colors.black26,
             child: Center(
               child: Card(
                 child: Padding(

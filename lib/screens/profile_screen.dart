@@ -43,7 +43,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   }
 
   Future<void> _saveProfile() async {
-    final user = ref.read(authStateProvider).appUser;
+    final user = ref.read(authStateProvider).user;
     if (user == null) return;
     setState(() => _saving = true);
     try {
@@ -110,7 +110,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final user = ref.watch(authStateProvider).appUser;
+    final user = ref.watch(authStateProvider).user;
     final themeMode = ref.watch(themeModeProvider);
 
     if (user == null) {

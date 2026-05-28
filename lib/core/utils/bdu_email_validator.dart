@@ -41,7 +41,7 @@ class BduEmailValidator {
       return 'Enter your university email';
     }
     if (!isValid(raw)) {
-      return 'Use your BDU email (e.g. BDU1403952@bdu.edu.et)';
+      return 'Use your BDU email (e.g. BDU1303957@bdu.edu.et)';
     }
     return null;
   }

@@ -28,6 +28,11 @@ class AdminDashboard extends ConsumerWidget {
             onPressed: () => context.push('/search'),
           ),
           IconButton(
+            icon: const Icon(Icons.person_add_outlined),
+            tooltip: 'Create staff account',
+            onPressed: () => context.push('/admin/create-user'),
+          ),
+          IconButton(
             icon: const Icon(Icons.groups_outlined),
             tooltip: 'Users',
             onPressed: () => context.push('/admin/users'),

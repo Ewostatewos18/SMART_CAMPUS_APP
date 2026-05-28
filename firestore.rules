@@ -10,41 +10,82 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
 
+    function userExists() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
     function userRole() {
       return userDoc().role;
     }
 
+    function isActiveAccount() {
+      return userDoc().get('isActive', true) == true;
+    }
+
+    function accountApproved() {
+      return userDoc().get('accountStatus', 'approved') == 'approved';
+    }
+
+    function isApprovedUser() {
+      return signedIn()
+        && userExists()
+        && isActiveAccount()
+        && accountApproved();
+    }
+
     function isAdmin() {
-      return signedIn() && userRole() == 'admin';
+      return isApprovedUser() && userRole() == 'admin';
     }
 
     function isExecutive() {
-      return signedIn() && userRole() in ['vicePresident', 'president'];
+      return isApprovedUser() && userRole() in ['vicePresident', 'president'];
     }
 
     function isOfficer() {
-      return signedIn() && userRole() == 'sectorOfficer';
+      return isApprovedUser() && userRole() == 'sectorOfficer';
     }
 
     function isStudent() {
-      return signedIn() && userRole() == 'student';
+      return isApprovedUser() && userRole() == 'student';
+    }
+
+    function isOwnProfile(userId) {
+      return signedIn() && request.auth.uid == userId;
+    }
+
+    function isOwnEmail() {
+      return signedIn()
+        && resource.data.email == request.auth.token.email;
     }
 
     match /users/{userId} {
-      allow read: if signedIn() && (request.auth.uid == userId || isAdmin());
-      allow create: if signedIn()
-        && request.auth.uid == userId
-        && request.resource.data.role == 'student';
-      allow update: if signedIn() && (
-        (request.auth.uid == userId
-          && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'sectorId']))
-        || isAdmin()
+      allow read: if isOwnProfile(userId) || isOwnEmail();
+      allow read: if isApprovedUser() && (
+        isAdmin() || isExecutive() || isOfficer()
+      );
+      allow create: if isOwnProfile(userId)
+        && request.resource.data.userId == userId
+        && request.resource.data.email is string
+        && request.resource.data.name is string;
+      allow update: if isAdmin() || (
+        isApprovedUser()
+        && isOwnProfile(userId)
+        && !request.resource.data.diff(resource.data).affectedKeys()
+          .hasAny(['role', 'sectorId', 'isActive', 'accountStatus'])
       );
       allow delete: if isAdmin();
     }
 
+    match /student_ids/{studentId} {
+      allow read: if signedIn();
+      allow create: if signedIn()
+        && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if isAdmin();
+    }
+
     match /complaints/{complaintId} {
-      allow read: if signedIn() && (
+      allow read: if isApprovedUser() && (
         resource.data.studentId == request.auth.uid
         || isAdmin()
         || isExecutive()
@@ -53,11 +94,10 @@ service cloud.firestore {
       allow create: if isStudent()
         && request.resource.data.studentId == request.auth.uid
         && request.resource.data.status == 'submitted';
-      allow update: if signedIn() && (
+      allow update: if isApprovedUser() && (
         isAdmin()
         || isExecutive()
-        || (isOfficer()
-          && resource.data.sectorId == userDoc().sectorId)
+        || (isOfficer() && resource.data.sectorId == userDoc().sectorId)
         || (resource.data.studentId == request.auth.uid
           && request.resource.data.diff(resource.data).affectedKeys()
             .hasOnly(['satisfaction', 'updatedAt']))
@@ -66,31 +106,44 @@ service cloud.firestore {
     }
 
     match /responses/{responseId} {
-      allow read: if signedIn();
-      allow create: if signedIn() && (
-        isAdmin() || isExecutive() || isOfficer() || isStudent()
-      );
+      allow read: if isApprovedUser();
+      allow create: if isApprovedUser();
       allow update, delete: if isAdmin();
     }
 
     match /notifications/{notificationId} {
-      allow read: if signedIn() && resource.data.userId == request.auth.uid;
-      allow create: if signedIn();
-      allow update: if signedIn() && resource.data.userId == request.auth.uid;
+      allow read: if isApprovedUser() && resource.data.userId == request.auth.uid;
+      allow create: if isApprovedUser();
+      allow update: if isApprovedUser() && resource.data.userId == request.auth.uid;
       allow delete: if isAdmin();
     }
 
     match /escalation_logs/{logId} {
       allow read: if isAdmin() || isExecutive() || isOfficer();
-      allow write: if signedIn();
+      allow write: if isApprovedUser();
+    }
+
+    match /sectors/{sectorId} {
+      allow read: if isApprovedUser();
+      allow write: if isAdmin();
+    }
+
+    match /reports/{reportId} {
+      allow read: if isAdmin() || isExecutive();
+      allow write: if isAdmin();
+    }
+
+    match /analytics/{docId} {
+      allow read: if isAdmin() || isExecutive();
+      allow write: if isAdmin();
     }
 
     match /messages/{messageId} {
-      allow read, write: if signedIn();
+      allow read, write: if isApprovedUser();
     }
 
     match /announcements/{announcementId} {
-      allow read: if signedIn();
+      allow read: if isApprovedUser();
       allow write: if isAdmin() || isExecutive();
     }
   }

@@ -55,7 +55,7 @@ class _ComplaintFormScreenState extends ConsumerState<ComplaintFormScreen> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
-    final auth = ref.read(authStateProvider).appUser;
+    final auth = ref.read(authStateProvider).user;
     if (auth == null) return;
 
     setState(() => _saving = true);

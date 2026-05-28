@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'app.dart';
+import 'core/services/firestore_bootstrap.dart';
 import 'core/providers/service_providers.dart';
 import 'firebase_options.dart';
 import 'screens/firebase_init_error_screen.dart';
@@ -22,6 +23,7 @@ Future<void> main() async {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
+    await FirestoreBootstrap.configure();
   } catch (e, st) {
     debugPrint('Firebase init failed: $e\n$st');
     runApp(FirebaseInitErrorScreen(error: e));

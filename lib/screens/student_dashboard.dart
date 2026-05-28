@@ -22,7 +22,7 @@ class _StudentDashboardState extends ConsumerState<StudentDashboard> {
 
   @override
   Widget build(BuildContext context) {
-    final user = ref.watch(authStateProvider).appUser;
+    final user = ref.watch(authStateProvider).user;
     if (user == null) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
@@ -168,7 +168,7 @@ class _NotificationsTab extends ConsumerWidget {
                 alignment: Alignment.centerRight,
                 child: TextButton(
                   onPressed: () {
-                    final uid = ref.read(authStateProvider).appUser!.userId;
+                    final uid = ref.read(authStateProvider).user!.userId;
                     notifSvc.markAllRead(uid);
                   },
                   child: const Text('Mark all read'),

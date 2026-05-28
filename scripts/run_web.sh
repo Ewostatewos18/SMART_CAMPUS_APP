@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Run Smart Campus on Chromium (required on Linux — Firebase has no Linux desktop SDK).
+# Primary dev target: Flutter Web (Chrome/Chromium) — Firebase Auth + Firestore work here.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -10,10 +10,11 @@ elif command -v chromium >/dev/null 2>&1; then
 elif command -v google-chrome >/dev/null 2>&1; then
   export CHROME_EXECUTABLE="$(command -v google-chrome)"
 else
-  echo "No Chromium/Chrome found. Install: sudo apt install chromium-browser"
+  echo "Install Chromium: sudo apt install chromium-browser"
   exit 1
 fi
 
-echo "Using CHROME_EXECUTABLE=$CHROME_EXECUTABLE"
+echo "Smart Campus — running on Web (recommended for Ubuntu dev)"
+echo "CHROME_EXECUTABLE=$CHROME_EXECUTABLE"
 flutter pub get
-exec flutter run -d chrome "$@"
+exec flutter run -d chrome --no-web-resources-cdn "$@"

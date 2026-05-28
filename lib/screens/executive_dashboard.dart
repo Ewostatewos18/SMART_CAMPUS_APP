@@ -4,19 +4,22 @@ import 'package:go_router/go_router.dart';
 
 import '../core/providers/service_providers.dart';
 import '../features/auth/presentation/auth_notifier.dart';
+import '../models/user_role.dart';
 import 'complaint_list_screen.dart';
 
 class ExecutiveDashboard extends ConsumerWidget {
-  const ExecutiveDashboard({super.key});
+  const ExecutiveDashboard({super.key, required this.role});
+
+  final UserRole role;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final user = ref.watch(authStateProvider).appUser;
+    final user = ref.watch(authStateProvider).user;
     final stream = ref.watch(complaintServiceProvider).streamEscalated();
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('${user?.role.displayName ?? 'Executive'} desk'),
+        title: Text('${role.displayName} desk'),
         actions: [
           IconButton(
             onPressed: () => context.push('/search'),
@@ -28,12 +31,14 @@ class ExecutiveDashboard extends ConsumerWidget {
           ),
         ],
       ),
-      body: ComplaintListScreen(
-        title: 'Escalated complaints',
-        complaintsStream: stream,
-        showStudentOnCard: true,
-        embedded: true,
-      ),
+      body: user?.role != role
+          ? const Center(child: Text('Access denied for this dashboard.'))
+          : ComplaintListScreen(
+              title: 'Escalated complaints',
+              complaintsStream: stream,
+              showStudentOnCard: true,
+              embedded: true,
+            ),
     );
   }
 }

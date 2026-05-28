@@ -101,7 +101,7 @@ class _ComplaintDetailScreenState extends ConsumerState<ComplaintDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final auth = ref.watch(authStateProvider).appUser;
+    final auth = ref.watch(authStateProvider).user;
     final svc = ref.watch(complaintServiceProvider);
 
     return Scaffold(

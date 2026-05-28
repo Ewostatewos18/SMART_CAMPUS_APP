@@ -338,7 +338,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       case UserRole.sectorOfficer:
         return [
           DropdownButtonFormField<String>(
-            value: _sectorId,
+            initialValue: _sectorId,
             decoration: const InputDecoration(
               labelText: 'Assigned sector',
               prefixIcon: Icon(Icons.apartment_outlined),

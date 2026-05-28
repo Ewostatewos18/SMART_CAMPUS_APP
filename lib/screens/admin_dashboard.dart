@@ -7,9 +7,7 @@ import '../core/providers/service_providers.dart';
 import '../core/widgets/complaint_card.dart';
 import '../core/widgets/empty_state.dart';
 import '../core/widgets/shimmer_loading.dart';
-import '../features/auth/presentation/auth_notifier.dart';
 import '../models/complaint_model.dart';
-import '../models/complaint_status.dart';
 import '../services/report_service.dart';
 
 class AdminDashboard extends ConsumerWidget {

@@ -29,7 +29,7 @@ class RoleSelector extends StatelessWidget {
             final useDropdown = constraints.maxWidth < 400;
             if (useDropdown) {
               return DropdownButtonFormField<UserRole>(
-                value: value,
+                initialValue: value,
                 decoration: const InputDecoration(
                   prefixIcon: Icon(Icons.badge_outlined),
                 ),

@@ -93,7 +93,7 @@ class _CreateStaffScreenState extends ConsumerState<CreateStaffScreen> {
                     ),
                     const SizedBox(height: 20),
                     DropdownButtonFormField<UserRole>(
-                      value: _role,
+                      initialValue: _role,
                       decoration: const InputDecoration(labelText: 'Role'),
                       items: [
                         UserRole.sectorOfficer,
@@ -114,7 +114,7 @@ class _CreateStaffScreenState extends ConsumerState<CreateStaffScreen> {
                     if (_role == UserRole.sectorOfficer) ...[
                       const SizedBox(height: 16),
                       DropdownButtonFormField<String>(
-                        value: _sectorId,
+                        initialValue: _sectorId,
                         decoration: const InputDecoration(labelText: 'Sector'),
                         items: CampusSectors.all
                             .map(

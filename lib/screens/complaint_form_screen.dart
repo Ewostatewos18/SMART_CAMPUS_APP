@@ -133,7 +133,7 @@ class _ComplaintFormScreenState extends ConsumerState<ComplaintFormScreen> {
                 ),
                 const SizedBox(height: 16),
                 DropdownButtonFormField<String>(
-                  value: _sectorId,
+                  initialValue: _sectorId,
                   decoration: const InputDecoration(
                     labelText: 'Sector',
                     hintText: 'Who should handle this?',
@@ -155,7 +155,7 @@ class _ComplaintFormScreenState extends ConsumerState<ComplaintFormScreen> {
                 ),
                 const SizedBox(height: 16),
                 DropdownButtonFormField<ComplaintPriority>(
-                  value: _priority,
+                  initialValue: _priority,
                   decoration: const InputDecoration(labelText: 'Priority'),
                   items: ComplaintPriority.values
                       .map(

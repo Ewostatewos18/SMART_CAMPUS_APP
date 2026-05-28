@@ -1,0 +1,15 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Smart Campus (Chrome Web)",
+      "request": "launch",
+      "type": "dart",
+      "program": "lib/main.dart",
+      "deviceId": "chrome",
+      "env": {
+        "CHROME_EXECUTABLE": "/usr/bin/chromium-browser"
+      }
+    }
+  ]
+}

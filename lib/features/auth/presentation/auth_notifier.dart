@@ -275,7 +275,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     if (text.contains('offline') || text.contains('unavailable')) {
       return FirestoreBootstrap.offlineMessage();
     }
-    if (e is StateError) return e.message ?? e.toString();
+    if (e is StateError) return e.message;
     if (e is ArgumentError) return e.message ?? e.toString();
     return e.toString();
   }

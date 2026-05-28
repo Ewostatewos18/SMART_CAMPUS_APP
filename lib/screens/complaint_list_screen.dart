@@ -7,9 +7,6 @@ import '../core/widgets/complaint_card.dart';
 import '../core/widgets/empty_state.dart';
 import '../core/widgets/shimmer_loading.dart';
 import '../models/complaint_model.dart';
-import '../models/complaint_status.dart';
-import '../models/complaint_type.dart';
-import '../models/sector_model.dart';
 
 class ComplaintListScreen extends ConsumerWidget {
   const ComplaintListScreen({
